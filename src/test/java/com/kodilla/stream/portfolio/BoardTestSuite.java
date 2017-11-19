@@ -3,10 +3,13 @@ package com.kodilla.stream.portfolio;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.stream.Collectors.toList;
 
 public class BoardTestSuite {
@@ -81,6 +84,7 @@ public class BoardTestSuite {
         //Then
         Assert.assertEquals(3, project.getTaskLists().size());
     }
+
     @Test
     public void testAddTaskListFindUsersTasks() {
         //Given
@@ -96,6 +100,7 @@ public class BoardTestSuite {
         Assert.assertEquals(user, tasks.get(0).getAssignedUser());
         Assert.assertEquals(user, tasks.get(1).getAssignedUser());
     }
+
     @Test
     public void testAddTaskListFindOutdatedTasks() {
         //Given
@@ -115,6 +120,7 @@ public class BoardTestSuite {
         Assert.assertEquals(1, tasks.size());
         Assert.assertEquals("HQLs for analysis", tasks.get(0).getTitle());
     }
+
     @Test
     public void testAddTaskListFindLongTasks() {
         //Given
@@ -132,5 +138,49 @@ public class BoardTestSuite {
 
         //Then
         Assert.assertEquals(2, longTasks);
+    }
+
+    @Test
+    public void testAddTaskListAverageWorkingOnTaskTwoStreams() {
+        //Given
+        Board project = prepareTestData();
+        //When
+        List<TaskList> inProgressTasks = new ArrayList<>();
+        inProgressTasks.add(new TaskList("In progress"));
+        long numberOfTasks = project.getTaskLists().stream()
+                .filter(inProgressTasks::contains)
+                .flatMap(tl -> tl.getTasks().stream())
+                .count();
+
+        long sumOfDays = project.getTaskLists().stream()
+                .filter(inProgressTasks::contains)
+                .flatMap(tl -> tl.getTasks().stream())
+                .map(t -> t.getCreated())
+                .map(d -> ChronoUnit.DAYS.between(d, LocalDate.now()))
+                .reduce(0L, (sum, current) -> sum = sum + current);
+        double average = (double) sumOfDays / numberOfTasks;
+
+        //Then
+        Assert.assertEquals(10.0, average, 0.0001);
+    }
+
+    @Test
+    public void testAddTaskListAverageWorkingOnTaskOneAverage() {
+        //Given
+        Board project = prepareTestData();
+        List<TaskList> inProgressTasks = new ArrayList<>();
+        inProgressTasks.add(new TaskList("In progress"));
+        //When
+        double average = project.getTaskLists().stream()
+                .filter(inProgressTasks::contains)
+                .flatMap(tl -> tl.getTasks().stream())
+                .map(t -> t.getCreated())
+                .map(d -> ChronoUnit.DAYS.between(d, LocalDate.now()))
+                .mapToLong(i -> i)
+                .average()
+                .getAsDouble();
+
+        //Then
+        Assert.assertEquals(10.0, average, 0.0001);
     }
 }
